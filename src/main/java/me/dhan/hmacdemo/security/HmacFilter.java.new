@@ -1,0 +1,85 @@
+package me.dhan.hmacdemo.security;
+
+import jakarta.servlet.*;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+
+import java.io.IOException;
+
+@Component
+public class HmacFilter implements Filter {
+
+    private static final String HMAC_HEADER_NAME = "X-HMAC-SIGNATURE";
+
+    @Value("${hmac.secret:defaultSecretKey}")
+    private String hmacSecret;
+
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
+
+        HttpServletRequest httpRequest = (HttpServletRequest) request;
+        HttpServletResponse httpResponse = (HttpServletResponse) response;
+
+        // Skip HMAC validation for Swagger UI and API docs
+        String requestURI = httpRequest.getRequestURI();
+        if (isSwaggerRequest(requestURI)) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        String hmacHeader = httpRequest.getHeader(HMAC_HEADER_NAME);
+
+        if (!StringUtils.hasText(hmacHeader)) {
+            httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            httpResponse.getWriter().write("Missing HMAC signature header");
+            return;
+        }
+
+        String calculatedHmac = calculateHmac(httpRequest);
+
+        if (!hmacHeader.equals(calculatedHmac)) {
+            httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            httpResponse.getWriter().write("Invalid HMAC signature");
+            return;
+        }
+
+        chain.doFilter(request, response);
+    }
+
+    private boolean isSwaggerRequest(String requestURI) {
+        return requestURI.contains("/swagger-ui") || 
+               requestURI.contains("/api-docs") || 
+               requestURI.equals("/") || 
+               requestURI.contains("/favicon.ico");
+    }
+
+    private String calculateHmac(HttpServletRequest request) {
+        // Get the request method and URI
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+
+        // Try to get query string first
+        String queryString = request.getQueryString();
+
+        // If query string is null (which happens in MockMvc tests), build it from parameters
+        if (queryString == null && !request.getParameterMap().isEmpty()) {
+            StringBuilder paramsBuilder = new StringBuilder();
+            request.getParameterMap().forEach((key, values) -> {
+                for (String value : values) {
+                    if (paramsBuilder.length() > 0) {
+                        paramsBuilder.append("&");
+                    }
+                    paramsBuilder.append(key).append("=").append(value);
+                }
+            });
+            queryString = paramsBuilder.toString();
+        }
+
+        // Use HmacUtils to generate the signature
+        return HmacUtils.generateHmacSignature(method, uri, queryString, hmacSecret);
+    }
+}
