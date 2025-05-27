@@ -21,6 +21,7 @@ public class DemoController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Tính tổng thành công",
                     content = @Content(schema = @Schema(implementation = Integer.class))),
+            @ApiResponse(responseCode = "401", description = "HMAC không hợp lệ"),
             @ApiResponse(responseCode = "400", description = "Tham số đầu vào không hợp lệ")
     })
     @GetMapping("/sum")
