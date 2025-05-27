@@ -6,10 +6,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import me.dhan.hmacdemo.model.SumRequest;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -116,5 +120,140 @@ public class DemoControllerTest {
     private String calculateHmac(String method, String uri, String queryString) {
         // For backward compatibility with existing tests
         return calculateHmac(method, uri, queryString, String.valueOf(System.currentTimeMillis()));
+    }
+
+    @Test
+    public void testSumPost() throws Exception {
+        var uri = "/api/demo/sum";
+        var method = "POST";
+        var timestamp = String.valueOf(System.currentTimeMillis());
+
+        // Create the request object
+        SumRequest request = new SumRequest(5, 3);
+
+        // Convert request to JSON
+        ObjectMapper objectMapper = new ObjectMapper();
+        String requestJson = objectMapper.writeValueAsString(request);
+
+        // For POST requests with JSON body, the query string is empty
+        String queryString = "";
+
+        // Test positive numbers
+        mockMvc.perform(post(uri)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson)
+                .header(TIMESTAMP_HEADER_NAME, timestamp)
+                .header(HMAC_HEADER_NAME, calculateHmac(method, uri, queryString, timestamp)))
+                .andExpect(status().isOk())
+                .andExpect(content().string("8"));
+
+        // Generate a new timestamp for each test to ensure it's current
+        timestamp = String.valueOf(System.currentTimeMillis());
+
+        // Test negative numbers
+        request = new SumRequest(-2, 7);
+        requestJson = objectMapper.writeValueAsString(request);
+
+        mockMvc.perform(post(uri)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson)
+                .header(TIMESTAMP_HEADER_NAME, timestamp)
+                .header(HMAC_HEADER_NAME, calculateHmac(method, uri, queryString, timestamp)))
+                .andExpect(status().isOk())
+                .andExpect(content().string("5"));
+
+        // Generate a new timestamp for each test to ensure it's current
+        timestamp = String.valueOf(System.currentTimeMillis());
+
+        // Test zero
+        request = new SumRequest(0, 0);
+        requestJson = objectMapper.writeValueAsString(request);
+
+        mockMvc.perform(post(uri)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson)
+                .header(TIMESTAMP_HEADER_NAME, timestamp)
+                .header(HMAC_HEADER_NAME, calculateHmac(method, uri, queryString, timestamp)))
+                .andExpect(status().isOk())
+                .andExpect(content().string("0"));
+    }
+
+    @Test
+    public void testSumPostWithoutHmacHeader() throws Exception {
+        String timestamp = String.valueOf(System.currentTimeMillis());
+
+        // Create the request object
+        SumRequest request = new SumRequest(5, 3);
+
+        // Convert request to JSON
+        ObjectMapper objectMapper = new ObjectMapper();
+        String requestJson = objectMapper.writeValueAsString(request);
+
+        mockMvc.perform(post("/api/demo/sum")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson)
+                .header(TIMESTAMP_HEADER_NAME, timestamp))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void testSumPostWithInvalidHmacHeader() throws Exception {
+        String timestamp = String.valueOf(System.currentTimeMillis());
+
+        // Create the request object
+        SumRequest request = new SumRequest(5, 3);
+
+        // Convert request to JSON
+        ObjectMapper objectMapper = new ObjectMapper();
+        String requestJson = objectMapper.writeValueAsString(request);
+
+        mockMvc.perform(post("/api/demo/sum")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson)
+                .header(TIMESTAMP_HEADER_NAME, timestamp)
+                .header(HMAC_HEADER_NAME, "invalidSignature"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void testSumPostWithoutTimestampHeader() throws Exception {
+        // Create the request object
+        SumRequest request = new SumRequest(5, 3);
+
+        // Convert request to JSON
+        ObjectMapper objectMapper = new ObjectMapper();
+        String requestJson = objectMapper.writeValueAsString(request);
+
+        // For POST requests with JSON body, the query string is empty
+        String queryString = "";
+
+        mockMvc.perform(post("/api/demo/sum")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson)
+                .header(HMAC_HEADER_NAME, calculateHmac("POST", "/api/demo/sum", queryString)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void testSumPostWithExpiredTimestamp() throws Exception {
+        // Create a timestamp from 10 minutes ago (beyond the 5-minute validity window)
+        String expiredTimestamp = String.valueOf(System.currentTimeMillis() - 10 * 60 * 1000);
+
+        // Create the request object
+        SumRequest request = new SumRequest(5, 3);
+
+        // Convert request to JSON
+        ObjectMapper objectMapper = new ObjectMapper();
+        String requestJson = objectMapper.writeValueAsString(request);
+
+        // For POST requests with JSON body, the query string is empty
+        String queryString = "";
+
+        mockMvc.perform(post("/api/demo/sum")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson)
+                .header(TIMESTAMP_HEADER_NAME, expiredTimestamp)
+                .header(HMAC_HEADER_NAME, calculateHmac("POST", "/api/demo/sum", queryString, expiredTimestamp)))
+                .andExpect(status().isUnauthorized());
     }
 }

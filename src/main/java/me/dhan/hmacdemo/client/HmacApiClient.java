@@ -1,7 +1,9 @@
 package me.dhan.hmacdemo.client;
 
+import me.dhan.hmacdemo.model.SumRequest;
 import me.dhan.hmacdemo.security.HmacUtils;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -36,7 +38,7 @@ public class HmacApiClient {
     }
 
     /**
-     * Makes a GET request to the sum endpoint.
+     * Makes a POST request to the sum endpoint.
      *
      * @param a First number
      * @param b Second number
@@ -46,21 +48,31 @@ public class HmacApiClient {
      */
     public int sum(int a, int b) throws IOException, InterruptedException {
         String uri = "/api/demo/sum";
-        String queryString = "a=" + a + "&b=" + b;
-        String fullUrl = baseUrl + uri + "?" + queryString;
+        String fullUrl = baseUrl + uri;
+
+        // Create request object
+        SumRequest sumRequest = new SumRequest(a, b);
+
+        // Convert to JSON
+        ObjectMapper objectMapper = new ObjectMapper();
+        String requestBody = objectMapper.writeValueAsString(sumRequest);
+
+        // For POST requests with JSON body, the query string is empty
+        String queryString = "";
 
         // Generate timestamp (current time in milliseconds)
         String timestamp = String.valueOf(System.currentTimeMillis());
 
         // Generate HMAC signature with timestamp
-        String hmacSignature = HmacUtils.generateHmacSignature("GET", uri, queryString, timestamp, secretKey);
+        String hmacSignature = HmacUtils.generateHmacSignature("POST", uri, queryString, timestamp, secretKey);
 
         // Build and send request
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(fullUrl))
                 .header(HMAC_HEADER_NAME, hmacSignature)
                 .header(TIMESTAMP_HEADER_NAME, timestamp)
-                .GET()
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
