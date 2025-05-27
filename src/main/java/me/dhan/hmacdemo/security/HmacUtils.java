@@ -41,6 +41,22 @@ public class HmacUtils {
      * @throws RuntimeException if there's an error generating the signature
      */
     public static String generateHmacSignature(String method, String uri, String queryString, String timestamp, String secretKey) {
+        return generateHmacSignature(method, uri, queryString, timestamp, null, secretKey);
+    }
+
+    /**
+     * Generates an HMAC signature for an API request with timestamp and request body.
+     *
+     * @param method      HTTP method (GET, POST, etc.)
+     * @param uri         Request URI (e.g., /api/demo/sum)
+     * @param queryString Query string (e.g., a=5&b=3)
+     * @param timestamp   Request timestamp in milliseconds since epoch
+     * @param requestBody JSON payload or request body
+     * @param secretKey   The secret key used for signing
+     * @return Base64 encoded HMAC signature
+     * @throws RuntimeException if there's an error generating the signature
+     */
+    public static String generateHmacSignature(String method, String uri, String queryString, String timestamp, String requestBody, String secretKey) {
         try {
             StringBuilder dataToSign = new StringBuilder();
             dataToSign.append(method).append("\n");
@@ -50,6 +66,10 @@ public class HmacUtils {
                 dataToSign.append(queryString).append("\n");
             } else {
                 dataToSign.append("\n");
+            }
+
+            if (requestBody != null && !requestBody.isEmpty()) {
+                dataToSign.append(requestBody).append("\n");
             }
 
             if (timestamp != null && !timestamp.isEmpty()) {

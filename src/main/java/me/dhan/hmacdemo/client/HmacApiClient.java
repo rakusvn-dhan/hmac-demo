@@ -63,8 +63,8 @@ public class HmacApiClient {
         // Generate timestamp (current time in milliseconds)
         String timestamp = String.valueOf(System.currentTimeMillis());
 
-        // Generate HMAC signature with timestamp
-        String hmacSignature = HmacUtils.generateHmacSignature("POST", uri, queryString, timestamp, secretKey);
+        // Generate HMAC signature with timestamp and request body
+        String hmacSignature = HmacUtils.generateHmacSignature("POST", uri, queryString, timestamp, requestBody, secretKey);
 
         // Build and send request
         HttpRequest request = HttpRequest.newBuilder()
@@ -78,10 +78,10 @@ public class HmacApiClient {
         // Generate and print equivalent curl command
         String curlCommand = generateCurlCommand("POST", fullUrl, requestBody, hmacSignature, timestamp);
         var message = """
-                
+
                 Equivalent curl command for the POST request:
                 %s
-                
+
                 """.formatted(curlCommand);
         System.out.println(message);
 

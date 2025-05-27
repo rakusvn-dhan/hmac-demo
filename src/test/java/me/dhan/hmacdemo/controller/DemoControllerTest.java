@@ -114,7 +114,11 @@ public class DemoControllerTest {
     }
 
     private String calculateHmac(String method, String uri, String queryString, String timestamp) {
-        return HmacUtils.generateHmacSignature(method, uri, queryString, timestamp, hmacSecret);
+        return calculateHmac(method, uri, queryString, timestamp, null);
+    }
+
+    private String calculateHmac(String method, String uri, String queryString, String timestamp, String requestBody) {
+        return HmacUtils.generateHmacSignature(method, uri, queryString, timestamp, requestBody, hmacSecret);
     }
 
     private String calculateHmac(String method, String uri, String queryString) {
@@ -143,7 +147,7 @@ public class DemoControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson)
                 .header(TIMESTAMP_HEADER_NAME, timestamp)
-                .header(HMAC_HEADER_NAME, calculateHmac(method, uri, queryString, timestamp)))
+                .header(HMAC_HEADER_NAME, calculateHmac(method, uri, queryString, timestamp, requestJson)))
                 .andExpect(status().isOk())
                 .andExpect(content().string("8"));
 
@@ -158,7 +162,7 @@ public class DemoControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson)
                 .header(TIMESTAMP_HEADER_NAME, timestamp)
-                .header(HMAC_HEADER_NAME, calculateHmac(method, uri, queryString, timestamp)))
+                .header(HMAC_HEADER_NAME, calculateHmac(method, uri, queryString, timestamp, requestJson)))
                 .andExpect(status().isOk())
                 .andExpect(content().string("5"));
 
@@ -173,7 +177,7 @@ public class DemoControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson)
                 .header(TIMESTAMP_HEADER_NAME, timestamp)
-                .header(HMAC_HEADER_NAME, calculateHmac(method, uri, queryString, timestamp)))
+                .header(HMAC_HEADER_NAME, calculateHmac(method, uri, queryString, timestamp, requestJson)))
                 .andExpect(status().isOk())
                 .andExpect(content().string("0"));
     }
@@ -230,7 +234,7 @@ public class DemoControllerTest {
         mockMvc.perform(post("/api/demo/sum")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson)
-                .header(HMAC_HEADER_NAME, calculateHmac("POST", "/api/demo/sum", queryString)))
+                .header(HMAC_HEADER_NAME, calculateHmac("POST", "/api/demo/sum", queryString, String.valueOf(System.currentTimeMillis()), requestJson)))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -253,7 +257,7 @@ public class DemoControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson)
                 .header(TIMESTAMP_HEADER_NAME, expiredTimestamp)
-                .header(HMAC_HEADER_NAME, calculateHmac("POST", "/api/demo/sum", queryString, expiredTimestamp)))
+                .header(HMAC_HEADER_NAME, calculateHmac("POST", "/api/demo/sum", queryString, expiredTimestamp, requestJson)))
                 .andExpect(status().isUnauthorized());
     }
 }

@@ -17,6 +17,7 @@ Tất cả các yêu cầu API phải bao gồm chữ ký HMAC trong header `X-H
 <HTTP_METHOD>\n
 <REQUEST_URI>\n
 <QUERY_STRING>\n
+<REQUEST_BODY>\n (nếu có)
 <TIMESTAMP>
 ```
 
@@ -26,6 +27,17 @@ Ví dụ, đối với yêu cầu GET đến `/api/demo/sum?a=5&b=3` với dấu
 GET
 /api/demo/sum
 a=5&b=3
+
+1634567890123
+```
+
+Đối với yêu cầu POST với JSON body đến `/api/demo/sum` với dấu thời gian `1634567890123` và body `{"a":5,"b":3}`, dữ liệu cần ký sẽ là:
+
+```
+POST
+/api/demo/sum
+
+{"a":5,"b":3}
 1634567890123
 ```
 
@@ -80,16 +92,19 @@ System.out.println("Kết quả tổng: " + result);
 
 ### Tạo HMAC thủ công
 
+#### Cho yêu cầu GET
+
 ```java
 // Tạo dấu thời gian hiện tại
 String timestamp = String.valueOf(System.currentTimeMillis());
 
-// Tạo chữ ký HMAC với dấu thời gian
+// Tạo chữ ký HMAC với dấu thời gian (không có request body)
 String hmacSignature = HmacUtils.generateHmacSignature(
     "GET", 
     "/api/demo/sum", 
     "a=5&b=3", 
     timestamp,
+    null, // Không có request body
     "YourSecretKeyHere123!"
 );
 
@@ -102,9 +117,39 @@ HttpRequest request = HttpRequest.newBuilder()
     .build();
 ```
 
+#### Cho yêu cầu POST với JSON body
+
+```java
+// Tạo dấu thời gian hiện tại
+String timestamp = String.valueOf(System.currentTimeMillis());
+
+// Tạo request body
+SumRequest sumRequest = new SumRequest(5, 3);
+ObjectMapper objectMapper = new ObjectMapper();
+String requestBody = objectMapper.writeValueAsString(sumRequest);
+
+// Tạo chữ ký HMAC với dấu thời gian và request body
+String hmacSignature = HmacUtils.generateHmacSignature(
+    "POST", 
+    "/api/demo/sum", 
+    "", // Không có query string
+    timestamp,
+    requestBody, // Bao gồm request body trong chữ ký
+    "YourSecretKeyHere123!"
+);
+
+// Thêm chữ ký và dấu thời gian vào header của yêu cầu HTTP
+HttpRequest request = HttpRequest.newBuilder()
+    .uri(URI.create("http://localhost:8080/api/demo/sum"))
+    .header("X-HMAC-SIGNATURE", hmacSignature)
+    .header("X-TIMESTAMP", timestamp)
+    .header("Content-Type", "application/json")
+    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+    .build();
+```
+
 ## Tài liệu API
 
 Tài liệu API có sẵn tại:
 - Swagger UI: http://localhost:8080/swagger-ui.html
 - OpenAPI JSON: http://localhost:8080/api-docs
-

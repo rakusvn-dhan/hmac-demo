@@ -2,12 +2,15 @@ package me.dhan.hmacdemo.security;
 
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
 
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
@@ -35,8 +38,11 @@ public class HmacFilter implements Filter {
             return;
         }
 
+        // Wrap the request to allow reading the body multiple times
+        CachedBodyHttpServletRequest cachedBodyRequest = new CachedBodyHttpServletRequest(httpRequest);
+
         // Validate timestamp
-        String timestamp = httpRequest.getHeader(TIMESTAMP_HEADER_NAME);
+        String timestamp = cachedBodyRequest.getHeader(TIMESTAMP_HEADER_NAME);
         if (!StringUtils.hasText(timestamp)) {
             httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             httpResponse.getWriter().write("Missing timestamp header");
@@ -50,14 +56,14 @@ public class HmacFilter implements Filter {
         }
 
         // Validate HMAC signature
-        String hmacHeader = httpRequest.getHeader(HMAC_HEADER_NAME);
+        String hmacHeader = cachedBodyRequest.getHeader(HMAC_HEADER_NAME);
         if (!StringUtils.hasText(hmacHeader)) {
             httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             httpResponse.getWriter().write("Missing HMAC signature header");
             return;
         }
 
-        String calculatedHmac = calculateHmac(httpRequest, timestamp);
+        String calculatedHmac = calculateHmac(cachedBodyRequest, timestamp);
 
         if (!hmacHeader.equals(calculatedHmac)) {
             httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -65,7 +71,7 @@ public class HmacFilter implements Filter {
             return;
         }
 
-        chain.doFilter(request, response);
+        chain.doFilter(cachedBodyRequest, response);
     }
 
     private boolean isSwaggerRequest(String requestURI) {
@@ -97,8 +103,14 @@ public class HmacFilter implements Filter {
             queryString = paramsBuilder.toString();
         }
 
-        // Use HmacUtils to generate the signature with timestamp
-        return HmacUtils.generateHmacSignature(method, uri, queryString, timestamp, hmacSecret);
+        // Get request body if available
+        String requestBody = null;
+        if (request instanceof CachedBodyHttpServletRequest) {
+            requestBody = ((CachedBodyHttpServletRequest) request).getBody();
+        }
+
+        // Use HmacUtils to generate the signature with timestamp and request body
+        return HmacUtils.generateHmacSignature(method, uri, queryString, timestamp, requestBody, hmacSecret);
     }
 
     /**
@@ -122,6 +134,73 @@ public class HmacFilter implements Filter {
             return !requestTime.isBefore(now.minus(TIMESTAMP_VALIDITY_MINUTES, ChronoUnit.MINUTES));
         } catch (NumberFormatException e) {
             return false;
+        }
+    }
+
+    /**
+     * A wrapper for HttpServletRequest that caches the request body so it can be read multiple times.
+     * This is necessary because the request body can only be read once from the original request.
+     */
+    private static class CachedBodyHttpServletRequest extends HttpServletRequestWrapper {
+        private final byte[] cachedBody;
+        private final String cachedBodyString;
+
+        public CachedBodyHttpServletRequest(HttpServletRequest request) throws IOException {
+            super(request);
+            // Read the request body and cache it
+            InputStream requestInputStream = request.getInputStream();
+            this.cachedBody = StreamUtils.copyToByteArray(requestInputStream);
+            this.cachedBodyString = new String(cachedBody, StandardCharsets.UTF_8);
+        }
+
+        @Override
+        public ServletInputStream getInputStream() throws IOException {
+            return new CachedServletInputStream(cachedBody);
+        }
+
+        @Override
+        public BufferedReader getReader() throws IOException {
+            return new BufferedReader(new InputStreamReader(getInputStream(), StandardCharsets.UTF_8));
+        }
+
+        /**
+         * Returns the cached request body as a string.
+         * 
+         * @return The request body as a string
+         */
+        public String getBody() {
+            return cachedBodyString;
+        }
+
+        /**
+         * A ServletInputStream implementation that reads from a cached byte array.
+         */
+        private static class CachedServletInputStream extends ServletInputStream {
+            private final ByteArrayInputStream inputStream;
+
+            public CachedServletInputStream(byte[] cachedBody) {
+                this.inputStream = new ByteArrayInputStream(cachedBody);
+            }
+
+            @Override
+            public int read() throws IOException {
+                return inputStream.read();
+            }
+
+            @Override
+            public boolean isFinished() {
+                return inputStream.available() == 0;
+            }
+
+            @Override
+            public boolean isReady() {
+                return true;
+            }
+
+            @Override
+            public void setReadListener(ReadListener readListener) {
+                throw new UnsupportedOperationException("setReadListener is not supported");
+            }
         }
     }
 }
