@@ -17,6 +17,8 @@ Project này minh họa cách triển khai xác thực HMAC (Hash-based Message 
 
 ## Xác thực HMAC
 
+Xem chi tiết về mã hóa HMAC trong [hmac.md](hmac.md).
+
 Tất cả các yêu cầu API phải bao gồm chữ ký HMAC trong header `X-HMAC-SIGNATURE` và dấu thời gian trong header `X-TIMESTAMP`. Chữ ký được tính toán bằng thuật toán HmacSHA256 với dữ liệu sau:
 
 ```
