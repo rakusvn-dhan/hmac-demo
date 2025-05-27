@@ -11,20 +11,22 @@ Project này minh họa cách triển khai xác thực HMAC (Hash-based Message 
 
 ## Xác thực HMAC
 
-Tất cả các yêu cầu API phải bao gồm chữ ký HMAC trong header `X-HMAC-SIGNATURE`. Chữ ký được tính toán bằng thuật toán HmacSHA256 với dữ liệu sau:
+Tất cả các yêu cầu API phải bao gồm chữ ký HMAC trong header `X-HMAC-SIGNATURE` và dấu thời gian trong header `X-TIMESTAMP`. Chữ ký được tính toán bằng thuật toán HmacSHA256 với dữ liệu sau:
 
 ```
 <HTTP_METHOD>\n
 <REQUEST_URI>\n
-<QUERY_STRING>
+<QUERY_STRING>\n
+<TIMESTAMP>
 ```
 
-Ví dụ, đối với yêu cầu GET đến `/api/demo/sum?a=5&b=3`, dữ liệu cần ký sẽ là:
+Ví dụ, đối với yêu cầu GET đến `/api/demo/sum?a=5&b=3` với dấu thời gian `1634567890123`, dữ liệu cần ký sẽ là:
 
 ```
 GET
 /api/demo/sum
 a=5&b=3
+1634567890123
 ```
 
 ## Cấu hình
@@ -34,6 +36,15 @@ Khóa bí mật HMAC được cấu hình trong `application.properties`:
 ```properties
 hmac.secret=YourSecretKeyHere123!
 ```
+
+## Xác thực dấu thời gian
+
+Để ngăn chặn các cuộc tấn công phát lại, tất cả các yêu cầu phải bao gồm dấu thời gian hiện tại trong header `X-TIMESTAMP`. Dấu thời gian phải là số mili giây kể từ Epoch (1/1/1970) và phải nằm trong khoảng thời gian hợp lệ:
+
+- Không cũ hơn quá 5 phút
+- Không quá 1 phút trong tương lai (để cho phép sai lệch đồng hồ nhỏ)
+
+Yêu cầu với dấu thời gian không hợp lệ sẽ bị từ chối với mã trạng thái 401 Unauthorized.
 
 ## Ví dụ sử dụng
 
@@ -51,18 +62,23 @@ System.out.println("Kết quả tổng: " + result);
 ### Tạo HMAC thủ công
 
 ```java
-// Tạo chữ ký HMAC
+// Tạo dấu thời gian hiện tại
+String timestamp = String.valueOf(System.currentTimeMillis());
+
+// Tạo chữ ký HMAC với dấu thời gian
 String hmacSignature = HmacUtils.generateHmacSignature(
     "GET", 
     "/api/demo/sum", 
     "a=5&b=3", 
+    timestamp,
     "YourSecretKeyHere123!"
 );
 
-// Thêm chữ ký vào header của yêu cầu HTTP
+// Thêm chữ ký và dấu thời gian vào header của yêu cầu HTTP
 HttpRequest request = HttpRequest.newBuilder()
     .uri(URI.create("http://localhost:8080/api/demo/sum?a=5&b=3"))
     .header("X-HMAC-SIGNATURE", hmacSignature)
+    .header("X-TIMESTAMP", timestamp)
     .GET()
     .build();
 ```
@@ -77,5 +93,4 @@ Tài liệu API có sẵn tại:
 
 - Giữ khóa bí mật HMAC an toàn
 - Sử dụng HTTPS trong môi trường sản xuất để bảo vệ chữ ký HMAC trong quá trình truyền tải
-- Cân nhắc thêm xác thực dấu thời gian để ngăn chặn các cuộc tấn công phát lại
 - Trong tình huống thực tế, mỗi client nên có khóa bí mật riêng

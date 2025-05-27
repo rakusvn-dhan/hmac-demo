@@ -26,21 +26,42 @@ public class HmacUtils {
      * @throws RuntimeException if there's an error generating the signature
      */
     public static String generateHmacSignature(String method, String uri, String queryString, String secretKey) {
+        return generateHmacSignature(method, uri, queryString, null, secretKey);
+    }
+
+    /**
+     * Generates an HMAC signature for an API request with timestamp.
+     *
+     * @param method      HTTP method (GET, POST, etc.)
+     * @param uri         Request URI (e.g., /api/demo/sum)
+     * @param queryString Query string (e.g., a=5&b=3)
+     * @param timestamp   Request timestamp in milliseconds since epoch
+     * @param secretKey   The secret key used for signing
+     * @return Base64 encoded HMAC signature
+     * @throws RuntimeException if there's an error generating the signature
+     */
+    public static String generateHmacSignature(String method, String uri, String queryString, String timestamp, String secretKey) {
         try {
             StringBuilder dataToSign = new StringBuilder();
             dataToSign.append(method).append("\n");
             dataToSign.append(uri).append("\n");
-            
+
             if (queryString != null && !queryString.isEmpty()) {
-                dataToSign.append(queryString);
+                dataToSign.append(queryString).append("\n");
+            } else {
+                dataToSign.append("\n");
             }
-            
+
+            if (timestamp != null && !timestamp.isEmpty()) {
+                dataToSign.append(timestamp);
+            }
+
             Mac hmac = Mac.getInstance(HMAC_ALGORITHM);
             SecretKeySpec secretKeySpec = new SecretKeySpec(
                     secretKey.getBytes(StandardCharsets.UTF_8), HMAC_ALGORITHM);
             hmac.init(secretKeySpec);
             byte[] hmacBytes = hmac.doFinal(dataToSign.toString().getBytes(StandardCharsets.UTF_8));
-            
+
             return Base64.getEncoder().encodeToString(hmacBytes);
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             throw new RuntimeException("Error generating HMAC signature", e);

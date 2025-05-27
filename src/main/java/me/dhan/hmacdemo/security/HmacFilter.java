@@ -8,11 +8,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 @Component
 public class HmacFilter implements Filter {
 
     private static final String HMAC_HEADER_NAME = "X-HMAC-SIGNATURE";
+    private static final String TIMESTAMP_HEADER_NAME = "X-TIMESTAMP";
+    private static final long TIMESTAMP_VALIDITY_MINUTES = 5;
 
     @Value("${hmac.secret:defaultSecretKey}")
     private String hmacSecret;
@@ -31,15 +35,29 @@ public class HmacFilter implements Filter {
             return;
         }
 
-        String hmacHeader = httpRequest.getHeader(HMAC_HEADER_NAME);
+        // Validate timestamp
+        String timestamp = httpRequest.getHeader(TIMESTAMP_HEADER_NAME);
+        if (!StringUtils.hasText(timestamp)) {
+            httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            httpResponse.getWriter().write("Missing timestamp header");
+            return;
+        }
 
+        if (!isValidTimestamp(timestamp)) {
+            httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            httpResponse.getWriter().write("Expired or invalid timestamp");
+            return;
+        }
+
+        // Validate HMAC signature
+        String hmacHeader = httpRequest.getHeader(HMAC_HEADER_NAME);
         if (!StringUtils.hasText(hmacHeader)) {
             httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             httpResponse.getWriter().write("Missing HMAC signature header");
             return;
         }
 
-        String calculatedHmac = calculateHmac(httpRequest);
+        String calculatedHmac = calculateHmac(httpRequest, timestamp);
 
         if (!hmacHeader.equals(calculatedHmac)) {
             httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -57,11 +75,11 @@ public class HmacFilter implements Filter {
                requestURI.contains("/favicon.ico");
     }
 
-    private String calculateHmac(HttpServletRequest request) {
+    private String calculateHmac(HttpServletRequest request, String timestamp) {
         // Get the request method and URI
         String method = request.getMethod();
         String uri = request.getRequestURI();
-        
+
         // Try to get query string first
         String queryString = request.getQueryString();
 
@@ -78,8 +96,32 @@ public class HmacFilter implements Filter {
             });
             queryString = paramsBuilder.toString();
         }
-        
-        // Use HmacUtils to generate the signature
-        return HmacUtils.generateHmacSignature(method, uri, queryString, hmacSecret);
+
+        // Use HmacUtils to generate the signature with timestamp
+        return HmacUtils.generateHmacSignature(method, uri, queryString, timestamp, hmacSecret);
+    }
+
+    /**
+     * Validates if the provided timestamp is within the allowed time window.
+     * 
+     * @param timestamp The timestamp to validate (milliseconds since epoch)
+     * @return true if the timestamp is valid, false otherwise
+     */
+    private boolean isValidTimestamp(String timestamp) {
+        try {
+            long timestampValue = Long.parseLong(timestamp);
+            Instant requestTime = Instant.ofEpochMilli(timestampValue);
+            Instant now = Instant.now();
+
+            // Check if timestamp is not in the future (with a small tolerance)
+            if (requestTime.isAfter(now.plus(1, ChronoUnit.MINUTES))) {
+                return false;
+            }
+
+            // Check if timestamp is not too old
+            return !requestTime.isBefore(now.minus(TIMESTAMP_VALIDITY_MINUTES, ChronoUnit.MINUTES));
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 }

@@ -16,6 +16,7 @@ import java.time.Duration;
 public class HmacApiClient {
 
     private static final String HMAC_HEADER_NAME = "X-HMAC-SIGNATURE";
+    private static final String TIMESTAMP_HEADER_NAME = "X-TIMESTAMP";
     private final String baseUrl;
     private final String secretKey;
     private final HttpClient httpClient;
@@ -47,23 +48,27 @@ public class HmacApiClient {
         String uri = "/api/demo/sum";
         String queryString = "a=" + a + "&b=" + b;
         String fullUrl = baseUrl + uri + "?" + queryString;
-        
-        // Generate HMAC signature
-        String hmacSignature = HmacUtils.generateHmacSignature("GET", uri, queryString, secretKey);
-        
+
+        // Generate timestamp (current time in milliseconds)
+        String timestamp = String.valueOf(System.currentTimeMillis());
+
+        // Generate HMAC signature with timestamp
+        String hmacSignature = HmacUtils.generateHmacSignature("GET", uri, queryString, timestamp, secretKey);
+
         // Build and send request
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(fullUrl))
                 .header(HMAC_HEADER_NAME, hmacSignature)
+                .header(TIMESTAMP_HEADER_NAME, timestamp)
                 .GET()
                 .build();
-        
+
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        
+
         if (response.statusCode() != 200) {
             throw new RuntimeException("API request failed with status code: " + response.statusCode());
         }
-        
+
         return Integer.parseInt(response.body());
     }
 
@@ -75,7 +80,7 @@ public class HmacApiClient {
         try {
             // Create client with base URL and secret key
             HmacApiClient client = new HmacApiClient("http://localhost:8080", "YourSecretKeyHere123!");
-            
+
             // Make authenticated request
             int result = client.sum(5, 3);
             System.out.println("Sum result: " + result);
