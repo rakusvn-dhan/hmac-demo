@@ -41,6 +41,8 @@ POST
 1634567890123
 ```
 
+Phía API và client sẽ dùng cùng một khóa bí mật để tạo và xác thực chữ ký HMAC xem hai bên có khớp với nhau hay không. Nếu chữ ký không giống nhau, yêu cầu sẽ bị từ chối với mã trạng thái 401 Unauthorized.
+
 ## Cấu hình
 
 Khóa bí mật HMAC được cấu hình trong `application.properties`:
