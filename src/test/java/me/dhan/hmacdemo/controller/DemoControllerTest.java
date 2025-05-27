@@ -27,27 +27,30 @@ public class DemoControllerTest {
 
     @Test
     public void testSum() throws Exception {
+        var uri = "/api/demo/sum";
+        var method = "GET";
+        
         // Test positive numbers
-        mockMvc.perform(get("/api/demo/sum")
+        mockMvc.perform(get(uri)
                 .param("a", "5")
                 .param("b", "3")
-                .header(HMAC_HEADER_NAME, calculateHmac("GET", "/api/demo/sum", "a=5&b=3")))
+                .header(HMAC_HEADER_NAME, calculateHmac(method, uri, "a=5&b=3")))
                 .andExpect(status().isOk())
                 .andExpect(content().string("8"));
 
         // Test negative numbers
-        mockMvc.perform(get("/api/demo/sum")
+        mockMvc.perform(get(uri)
                 .param("a", "-2")
                 .param("b", "7")
-                .header(HMAC_HEADER_NAME, calculateHmac("GET", "/api/demo/sum", "a=-2&b=7")))
+                .header(HMAC_HEADER_NAME, calculateHmac(method, uri, "a=-2&b=7")))
                 .andExpect(status().isOk())
                 .andExpect(content().string("5"));
 
         // Test zero
-        mockMvc.perform(get("/api/demo/sum")
+        mockMvc.perform(get(uri)
                 .param("a", "0")
                 .param("b", "0")
-                .header(HMAC_HEADER_NAME, calculateHmac("GET", "/api/demo/sum", "a=0&b=0")))
+                .header(HMAC_HEADER_NAME, calculateHmac(method, uri, "a=0&b=0")))
                 .andExpect(status().isOk())
                 .andExpect(content().string("0"));
     }
