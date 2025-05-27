@@ -108,8 +108,3 @@ Tài liệu API có sẵn tại:
 - Swagger UI: http://localhost:8080/swagger-ui.html
 - OpenAPI JSON: http://localhost:8080/api-docs
 
-## Cân nhắc về bảo mật
-
-- Giữ khóa bí mật HMAC an toàn
-- Sử dụng HTTPS trong môi trường sản xuất để bảo vệ chữ ký HMAC trong quá trình truyền tải
-- Trong tình huống thực tế, mỗi client nên có khóa bí mật riêng
