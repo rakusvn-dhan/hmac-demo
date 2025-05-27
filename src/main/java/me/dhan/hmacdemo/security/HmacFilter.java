@@ -70,7 +70,7 @@ public class HmacFilter implements Filter {
             StringBuilder paramsBuilder = new StringBuilder();
             request.getParameterMap().forEach((key, values) -> {
                 for (String value : values) {
-                    if (paramsBuilder.length() > 0) {
+                    if (!paramsBuilder.isEmpty()) {
                         paramsBuilder.append("&");
                     }
                     paramsBuilder.append(key).append("=").append(value);

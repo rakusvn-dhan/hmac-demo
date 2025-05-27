@@ -70,6 +70,7 @@ public class HmacApiClient {
     /**
      * Example usage of the HMAC API client.
      */
+    @SuppressWarnings("CallToPrintStackTrace")
     public static void main(String[] args) {
         try {
             // Create client with base URL and secret key
