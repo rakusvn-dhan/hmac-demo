@@ -75,6 +75,16 @@ public class HmacApiClient {
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
 
+        // Generate and print equivalent curl command
+        String curlCommand = generateCurlCommand("POST", fullUrl, requestBody, hmacSignature, timestamp);
+        var message = """
+                
+                Equivalent curl command for the POST request:
+                %s
+                
+                """.formatted(curlCommand);
+        System.out.println(message);
+
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
@@ -82,6 +92,33 @@ public class HmacApiClient {
         }
 
         return Integer.parseInt(response.body());
+    }
+
+    /**
+     * Generates a curl command equivalent to the HTTP request being made.
+     *
+     * @param method         HTTP method (GET, POST, etc.)
+     * @param url            Full URL of the request
+     * @param body           Request body (for POST, PUT, etc.)
+     * @param hmacSignature  HMAC signature for authentication
+     * @param timestamp      Request timestamp
+     * @return A string representing the equivalent curl command
+     */
+    private String generateCurlCommand(String method, String url, String body, String hmacSignature, String timestamp) {
+        StringBuilder curlCommand = new StringBuilder();
+        curlCommand.append("curl -X ").append(method).append(" \\\n");
+        curlCommand.append("  \"").append(url).append("\" \\\n");
+        curlCommand.append("  -H \"").append(HMAC_HEADER_NAME).append(": ").append(hmacSignature).append("\" \\\n");
+        curlCommand.append("  -H \"").append(TIMESTAMP_HEADER_NAME).append(": ").append(timestamp).append("\" \\\n");
+        curlCommand.append("  -H \"Content-Type: application/json\" \\\n");
+
+        if (body != null && !body.isEmpty()) {
+            // Escape double quotes in the body for proper shell escaping
+            String escapedBody = body.replace("\"", "\\\"");
+            curlCommand.append("  -d \"").append(escapedBody).append("\"");
+        }
+
+        return curlCommand.toString();
     }
 
     /**
