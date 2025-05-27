@@ -46,6 +46,25 @@ hmac.secret=YourSecretKeyHere123!
 
 Yêu cầu với dấu thời gian không hợp lệ sẽ bị từ chối với mã trạng thái 401 Unauthorized.
 
+## Sơ đồ Filter
+
+```mermaid
+flowchart TD
+    A[Request Received] --> B{Is it a Swagger Request?};
+    B -- Yes --> C[Allow Request];
+    B -- No --> D{Timestamp Header Present?};
+    D -- No --> E[Reject Request: Missing Timestamp];
+    D -- Yes --> F{Is Timestamp Valid?};
+    F -- No --> G[Reject Request: Invalid Timestamp];
+    F -- Yes --> H{HMAC Header Present?};
+    H -- No --> I[Reject Request: Missing HMAC Header];
+    H -- Yes --> J[Calculate HMAC];
+    J --> K{Is HMAC Signature Valid?};
+    K -- No --> L[Reject Request: Invalid HMAC Signature];
+    K -- Yes --> C;
+    C --> END[Process Request];
+```
+
 ## Ví dụ sử dụng
 
 ### Sử dụng HmacApiClient
