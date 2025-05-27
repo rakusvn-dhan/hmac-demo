@@ -1,17 +1,17 @@
 # HMAC Demo API
 
-This project demonstrates how to implement HMAC (Hash-based Message Authentication Code) validation for securing API endpoints.
+Project này minh họa cách triển khai xác thực HMAC (Hash-based Message Authentication Code) để bảo mật các đầu cuối API.
 
-## Features
+## Tính năng
 
-- Simple Spring Boot REST API with a demo endpoint
-- HMAC validation filter that secures all API requests
-- Swagger/OpenAPI documentation
-- Example client for making authenticated requests
+- API REST Spring Boot đơn giản với demo đầu cuối
+- Filter xác thực HMAC bảo mật tất cả các yêu cầu API
+- Tài liệu Swagger/OpenAPI
+- Client mẫu để thực hiện các yêu cầu đã xác thực
 
-## HMAC Authentication
+## Xác thực HMAC
 
-All API requests must include an HMAC signature in the `X-HMAC-SIGNATURE` header. The signature is calculated using the HmacSHA256 algorithm with the following data:
+Tất cả các yêu cầu API phải bao gồm chữ ký HMAC trong header `X-HMAC-SIGNATURE`. Chữ ký được tính toán bằng thuật toán HmacSHA256 với dữ liệu sau:
 
 ```
 <HTTP_METHOD>\n
@@ -19,7 +19,7 @@ All API requests must include an HMAC signature in the `X-HMAC-SIGNATURE` header
 <QUERY_STRING>
 ```
 
-For example, for a GET request to `/api/demo/sum?a=5&b=3`, the data to sign would be:
+Ví dụ, đối với yêu cầu GET đến `/api/demo/sum?a=5&b=3`, dữ liệu cần ký sẽ là:
 
 ```
 GET
@@ -27,31 +27,31 @@ GET
 a=5&b=3
 ```
 
-## Configuration
+## Cấu hình
 
-The HMAC secret key is configured in `application.properties`:
+Khóa bí mật HMAC được cấu hình trong `application.properties`:
 
 ```properties
 hmac.secret=YourSecretKeyHere123!
 ```
 
-## Example Usage
+## Ví dụ sử dụng
 
-### Using the HmacApiClient
+### Sử dụng HmacApiClient
 
 ```java
-// Create client with base URL and secret key
+// Tạo client với URL cơ sở và khóa bí mật
 HmacApiClient client = new HmacApiClient("http://localhost:8080", "YourSecretKeyHere123!");
 
-// Make authenticated request
+// Thực hiện yêu cầu đã xác thực
 int result = client.sum(5, 3);
-System.out.println("Sum result: " + result);
+System.out.println("Kết quả tổng: " + result);
 ```
 
-### Manual HMAC Generation
+### Tạo HMAC thủ công
 
 ```java
-// Generate HMAC signature
+// Tạo chữ ký HMAC
 String hmacSignature = HmacUtils.generateHmacSignature(
     "GET", 
     "/api/demo/sum", 
@@ -59,7 +59,7 @@ String hmacSignature = HmacUtils.generateHmacSignature(
     "YourSecretKeyHere123!"
 );
 
-// Add the signature to your HTTP request header
+// Thêm chữ ký vào header của yêu cầu HTTP
 HttpRequest request = HttpRequest.newBuilder()
     .uri(URI.create("http://localhost:8080/api/demo/sum?a=5&b=3"))
     .header("X-HMAC-SIGNATURE", hmacSignature)
@@ -67,15 +67,15 @@ HttpRequest request = HttpRequest.newBuilder()
     .build();
 ```
 
-## API Documentation
+## Tài liệu API
 
-API documentation is available at:
+Tài liệu API có sẵn tại:
 - Swagger UI: http://localhost:8080/swagger-ui.html
 - OpenAPI JSON: http://localhost:8080/api-docs
 
-## Security Considerations
+## Cân nhắc về bảo mật
 
-- Keep the HMAC secret key secure
-- Use HTTPS in production to protect the HMAC signature in transit
-- Consider adding timestamp validation to prevent replay attacks
-- In a real-world scenario, each client should have their own secret key
+- Giữ khóa bí mật HMAC an toàn
+- Sử dụng HTTPS trong môi trường sản xuất để bảo vệ chữ ký HMAC trong quá trình truyền tải
+- Cân nhắc thêm xác thực dấu thời gian để ngăn chặn các cuộc tấn công phát lại
+- Trong tình huống thực tế, mỗi client nên có khóa bí mật riêng
