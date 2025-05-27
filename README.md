@@ -2,6 +2,12 @@
 
 Project này minh họa cách triển khai xác thực HMAC (Hash-based Message Authentication Code) để bảo mật các đầu cuối API.
 
+## Cách sử dụng
+
+1. Khởi chạy `HmacDemoApplication`
+2. Khởi chạy `HmacApiClient`
+3. Console của `HmacApiClient` sẽ thực thi mã hóa HMAC, in ra lệnh `curl` tương ứng và trả về kết quả của request.
+
 ## Tính năng
 
 - API REST Spring Boot đơn giản với demo đầu cuối
