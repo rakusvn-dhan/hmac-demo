@@ -154,12 +154,12 @@ public class HmacFilter implements Filter {
         }
 
         @Override
-        public ServletInputStream getInputStream() throws IOException {
+        public ServletInputStream getInputStream() {
             return new CachedServletInputStream(cachedBody);
         }
 
         @Override
-        public BufferedReader getReader() throws IOException {
+        public BufferedReader getReader() {
             return new BufferedReader(new InputStreamReader(getInputStream(), StandardCharsets.UTF_8));
         }
 
@@ -183,7 +183,7 @@ public class HmacFilter implements Filter {
             }
 
             @Override
-            public int read() throws IOException {
+            public int read() {
                 return inputStream.read();
             }
 

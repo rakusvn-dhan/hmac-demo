@@ -15,6 +15,7 @@ import java.time.Duration;
  * Example client for making authenticated requests to the HMAC-protected API.
  * This class demonstrates how to generate and include HMAC signatures in requests.
  */
+@SuppressWarnings({"SameParameterValue", "UastIncorrectHttpHeaderInspection"})
 public class HmacApiClient {
 
     private static final String HMAC_HEADER_NAME = "X-HMAC-SIGNATURE";

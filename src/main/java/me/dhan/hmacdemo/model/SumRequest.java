@@ -8,6 +8,7 @@ public class SumRequest {
     private int b;
 
     // Default constructor for JSON deserialization
+    @SuppressWarnings("unused")
     public SumRequest() {
     }
 
@@ -20,6 +21,7 @@ public class SumRequest {
         return a;
     }
 
+    @SuppressWarnings("unused")
     public void setA(int a) {
         this.a = a;
     }
@@ -28,6 +30,7 @@ public class SumRequest {
         return b;
     }
 
+    @SuppressWarnings("unused")
     public void setB(int b) {
         this.b = b;
     }

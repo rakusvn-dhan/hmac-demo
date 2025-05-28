@@ -25,6 +25,7 @@ public class HmacUtils {
      * @return Base64 encoded HMAC signature
      * @throws RuntimeException if there's an error generating the signature
      */
+    @SuppressWarnings("unused")
     public static String generateHmacSignature(String method, String uri, String queryString, String secretKey) {
         return generateHmacSignature(method, uri, queryString, null, secretKey);
     }
